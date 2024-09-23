@@ -1,0 +1,195 @@
+---
+title: "QMM Assignment 2" 
+author: "Sandhya kamireddy"
+date: "2024-09-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#### Question
+
+The Weigelt Corporation has three branch plants with excess production capacity. Fortunately, the corporation has a new product ready to begin production, and all three plants have this capability, so some of the excess capacity can be used in this way. This product can be made in three sizes–large, medium, and small–that yield a net unit profit of $420, $360, and $300, respectively. Plants 1, 2, and 3 have the excess capacity to produce 750, 900, and 450 units per day of this product, respectively, regardless of the size or combination of sizes involved. The amount of available in-process storage space also imposes a limitation on the production rates of the new product. Plants 1, 2, and 3 have 13,000, 12,000, and 5,000 square feet, respectively, of in-process storage space available for a day’s production of this product. Each unit of the large, medium, and small sizes produced per day requires 20, 15, and 12 square feet, respectively. Sales forecasts indicate that if available, 900, 1,200, and 750 units of the large, medium, and small sizes, respectively, would be sold per day. At each plant, some employees will need to be laid off unless most of the plant’s excess production capacity can be used to produce the new product. To avoid layoffs if possible, management has decided that the plants should use the same percentage of their excess capacity to produce the new product. Management wishes to know how much of each of the sizes should be produced by each of the plants to maximize profit. Solve the problem using lpsolve, or any other equivalent library in R.
+
+```{r}
+We_corp<- matrix(c(900,"$420",20,1200, "$360",15,750,"$300",12),ncol =3,byrow=TRUE)
+
+# Describing the names of Rows and Columns
+
+colnames(We_corp)<-c("Sales","Profit","Material")
+rownames(We_corp)<-c("Large","Medium","Small")
+table1=as.table(We_corp)
+table1
+
+```
+
+#Determining the objective, constraints, direction and constants to solve the problem.
+
+Objective function-
+
+Objective functions purpose:-
+
+MaxZ=420(A1+A2+A3)+360(K1+K2+K3)+300(L1+L2+L3)
+
+##OBJECTIVE FUNCTION REARRANGED
+
+MaxZ=420A1+360K1+300l1+420A2+360K2+300L2+420A3+360K3+300L3
+
+A1+K1+L1<=750
+
+A2+K2+L2<=900
+
+A3+K3+L3<=450
+
+20A1+15K1+12L1<=13000
+
+20A2+15K2+12L2<=12000
+
+20A3+15K3+12L3<=5000
+
+A1+A2+A3<=900
+
+K1+K2+K3<=1200
+
+L1+L2+L3<=750
+
+Non Negativity Constraints
+
+A1,A2,A3,K1,K2,K3,L1,L2,L3>=0
+
+A1+K1+L1750
+ = A2+K2+L2900
+ = A3+K3+L3450
+
+900A1+900K1+900L1−750A2−750K2−750L2+0A3+0K3+0L3=0
+
+0A1+0K1+0L1+450A2+450K2+450L2−900A3−900K3−900L3=0
+
+450A1+450K1+450L1+0A2+0K2+0L2−750A3−750K3−750L3=0
+
+Solving the problem in R:-
+
+## Solving the answer
+
+Library "lpsolve" has to be used to solve the problem.
+
+```{r}
+#install.packages("lpSolve")
+library("lpSolve")
+
+```
+
+
+```{r}
+#Determining the Objective Function - fun_obj
+
+fun_obj <- c(420,360,300,420,360,300,420,360,300)
+```
+
+
+```{r}
+#Determining the Constraints - fun_con
+
+fun_con <- matrix(c(1,1,1,0,0,0,0,0,0,
+                       0,0,0,1,1,1,0,0,0,
+                       0,0,0,0,0,0,1,1,1,
+                       20,15,12,0,0,0,0,0,0,
+                       0,0,0,20,15,12,0,0,0,
+                       0,0,0,0,0,0,20,15,12,
+                       1,0,0,1,0,0,1,0,0,
+                       0,1,0,0,1,0,0,1,0,
+                       0,0,1,0,0,1,0,0,1,
+                       900,900,900,-750,-750,-750,0,0,0,
+                       0,0,0,450,450,450,-900,-900,-900,
+                       450,450,450,0,0,0,-750,-750,-750),nrow = 12,byrow = TRUE)
+fun_con
+
+```
+```{r}
+#Determining the constraints Direction - fun_dir
+
+fun_dir <- c('<=',
+
+           '<=',
+           
+           '<=',
+           
+           '<=',
+           
+           '<=',
+           
+           '<=',
+           
+           '<=',
+           
+           '<=',
+           
+           '<=',
+           '=',
+           '=',
+           '=')
+
+```
+
+
+```{r}
+# constants = right hand side values - fun_rhs
+
+
+fun_rhs <- c(750,
+         900,
+         450,
+         13000,
+         12000,
+         5000,
+         900,
+         1200,
+         750,
+         0,
+         0,
+         0)
+
+
+```
+
+
+```{r}
+#using the lp function for solving the problem on basis of the objective function that means to profit maximization
+
+maximized_cost=lp('max',fun_obj,fun_con,fun_dir,fun_rhs)
+
+maximized_cost
+
+```
+
+
+
+```{r}
+
+#usage of the lp function again for getting the values for the above defined variables
+
+maximized_cost$solution
+
+maximized_cost$solution[1]
+
+maximized_cost$solution[2]
+
+maximized_cost$solution[3]
+
+maximized_cost$solution[4]
+
+maximized_cost$solution[5]
+
+maximized_cost$solution[6]
+
+maximized_cost$solution[7]
+
+maximized_cost$solution[8]
+
+maximized_cost$solution[9]
+
+
+```
