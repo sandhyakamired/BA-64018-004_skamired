@@ -1,0 +1,230 @@
+---
+title: "QMM-ASSIGNMENT3"
+author: "Sandhya"
+date: "2024-10-04"
+output: html_document
+---
+Question:
+
+Heart Start produces automated external defibrillators (AEDs) in each of two different plants (A
+and B). The unit production costs and monthly production capacity of the two plants are
+indicated in the table below. The AEDs are sold through three wholesalers. The shipping cost
+from each plant to the warehouse of each wholesaler along with the monthly demand from each
+wholesaler are also indicated in the table. How many AEDs should be produced in each plant,
+and how should they be distributed to each of the three wholesaler warehouses so as to minimize
+the combined cost of production and shipping?
+Unit Shipping Cost Unit Monthly
+Warehouse 1 Warehouse 2 Warehouse 3 Production
+Cost
+Production
+Capacity
+Plant A $22 $14 $30 $600 100
+Plant B $16 $20 $24 $625 120
+Monthly
+Demand
+80 60 70
+Formulate and solve this transportation problem.
+Requirements
+
+
+```{r}
+# Install and load lpSolve
+if (!requireNamespace("lpSolve", quietly = TRUE)) {
+  install.packages("lpSolve")
+}
+library(lpSolve)
+```
+
+
+```{r}
+# Creating a dataframe for the transportation problem
+datafr <- data.frame(Warehouse_1 = c("$22", "$16", 80),
+                     Warehouse_2 = c("$14", "$20", 60),
+                     Warehouse_3 = c("$30", "$24", 70),
+                     Unit_production_cost = c("$600", "$625", " "),
+                     Monthly_production_capacity = c(100, 120, " "))
+rownames(datafr) <- c("Plant A", "Plant B", "Monthly Demand")
+
+# Generating a formatted table
+library(knitr)
+#install.packages("kableExtra")
+library(kableExtra)
+
+datafr %>%
+  kable() %>%
+  kable_classic() %>%
+  column_spec(1, border_right = TRUE) %>%
+  column_spec(4, border_right = TRUE) %>%
+  row_spec(2, extra_css = "border-bottom:dotted") %>%
+  add_header_above(header = c(" " = 1, "Unit Shipping Cost" = 3, " " = 2))
+
+```
+
+
+  Problem Setup:
+  Plants: A and B
+  Warehouses: 1, 2, 3
+
+	Production Costs:
+	Plant A: $600 per unit
+	Plant B: $625 per unit
+	
+	
+	Shipping Costs:
+	Plant A to Warehouse 1: $22, Warehouse 2: $14, Warehouse 3: $30
+	Plant B to Warehouse 1: $16, Warehouse 2: $20, Warehouse 3: $24
+	
+	
+	Monthly Production Capacity:
+	Plant A: 100 units
+	Plant B: 120 units
+	
+	
+	Monthly Demand:
+  Warehouse 1: 80 units
+  Warehouse 2: 60 units 
+  Warehouse 3: 70 units
+
+Decision Variables:
+
+
+Let X11, X12, X13 represent the number of AEDs shipped from plant A to warehouse 1, 2, 3 respectively, and X21, X22, X23 represent same from plant B.
+
+Objective function-
+
+Here We are aiming to minimize the total cost of production and shipping,which we can write as:
+
+Min Z = (600+22)x11 + (600+14)X12 + (600+30)x13 + (625+16)x21 + (625+20)x22 + (625+24)x23
+
+This simplies to :
+
+MIn Z =622x11 + 614x12+ 630x13 + 641x21 + 645x22 + 649x23
+
+
+Constraints-
+
+$$1) X11 + X12 + X13 \le 100 (Plant A capacity)$$
+
+$$2) X21 + X22 + X23 \le 120 ( plant B capacity)$$
+
+$$3) X11 + X21 \ge 80 (warehouse 1 demand)$$
+
+$$4) X12 + X22 \ge 60 (warehouse 2 demand)$$
+
+$$5) X13 + X23 \ge 70 (warehouse 3 demand)$$
+
+Non- Negativity-
+
+$$All\ Xij \ge 0.$$
+
+
+
+
+
+```{r}
+# Defining the costs associated with production and shipping.
+# Decision variables order: 
+# [A to Warehouse 1, A to Warehouse 2, A to Warehouse 3, 
+#  B to Warehouse 1, B to Warehouse 2, B to Warehouse 3]
+Shipping_costs <- c(600 + 22, 600 + 14, 600 + 30, 
+           625 + 16, 625 + 20, 625 + 24)
+
+```
+
+
+
+```{r}
+# Setting up the matrix that will include all the constraints for the problem.
+# Each row corresponds to a constraint: 
+# 1) Plant A capacity, 2) Plant B capacity
+# 3) Warehouse 1 demand, 4) Warehouse 2 demand, 5) Warehouse 3 demand
+constraint_matrix <- matrix(c(1, 1, 1, 0, 0, 0,   # Capacity of Plant A
+                              0, 0, 0, 1, 1, 1,   # Capacity of plant B
+                              1, 0, 0, 1, 0, 0,   # Demand at the warehouse 1
+                              0, 1, 0, 0, 1, 0,   # Demand at the warehouse 2
+                              0, 0, 1, 0, 0, 1),  # Demand at the warehouse 3
+                            nrow = 5, byrow = TRUE)
+
+```
+
+
+
+```{r}
+
+# Defining the Right-hand side values for the constraints
+constraints_rhs <- c(100, 120, 80, 60, 70)  # Values of Capacity and Demand
+
+```
+
+
+
+```{r}
+# Specifying the directions for the constraints
+# "less than or equal to" for the capacity of plant, "equal to" for the warehouse demands
+directions <- c("<=", "<=", "=", "=", "=")
+```
+
+
+```{r}
+# Solving the transportation problem using lp() function
+solution <- lp("min", Shipping_costs, constraint_matrix, directions, constraints_rhs)
+solution
+
+```
+
+
+
+```{r}
+# Displaying the results
+if (solution$status == 0) 
+  # If an optimal solution is found then print the results
+  print("Optimal solution found:")
+  solution$solution_matrix <- matrix(solution$solution, nrow = 2, byrow = TRUE)
+  rownames(solution$solution_matrix) <- c("Plant A", "Plant B")
+  colnames(solution$solution_matrix) <- c("Warehouse 1", "Warehouse 2", "Warehouse 3")
+  print(solution$solution_matrix)
+
+```
+
+
+
+
+
+ # Calculating the total number of AEDs to be produced by Plant A
+ 
+```{r}
+total_A <- sum(solution$solution_matrix[1, ])
+  print(paste("Number of AEDs to be produced by Plant A: ", total_A))
+
+```
+ 
+
+```{r}
+ 
+  # Calculating the total number of AEDs to be produced by Plant B
+  total_B <- sum(solution$solution_matrix[2, ])
+  print(paste("Number of AEDs to be produced by Plant B: ", total_B))
+  
+```
+  
+  
+```{r}
+
+ # Display the minimized total cost
+  print(paste("Minimized total cost: $", solution$objval))
+```
+  
+ 
+  
+  
+```{r}
+# Total cost
+print(paste(solution$objval))
+```
+Conclusion:
+
+
+The transportation problem for Heart Start has been optimized using linear programming, enabling efficient distribution of automated external defibrillators (AEDs) from two plants to three wholesalers. Plant A will produce 100 units, while Plant B will produce 110 units, meeting all monthly demands within capacity limits. The total minimized cost for production and shipping is $132,790. This optimization streamlines logistics and enhances resource utilization. Ultimately, it allows Heart Start to reduce operational costs and improve customer service, strengthening its market competitiveness.
+
+
+
