@@ -1,0 +1,245 @@
+---
+title: "skamired_assignmentmodule8"
+author: "Sandhya"
+date: "2024-10-22"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+## QUESTION
+
+Hope Valley Health Care Association 
+
+The Hope Valley Health Care Association owns and operates six nursing homes in adjoining 
+states. An evaluation of their efficiency has been undertaken using two inputs and two outputs. 
+The inputs are staffing labor (measured in average hours per day) and the cost of supplies (in 
+thousands of dollars per day). The outputs are the number of patient-days reimbursed by third
+party sources and the number of patient-days reimbursed privately. A summary of performance 
+data is shown in the table below. 
+
+Questions 
+1. Formulate and perform DEA analysis under all DEA assumptions of FDH, CRS, VRS, 
+IRS, DRS,  and FRH. 
+2. Determine the Peers and Lambdas under each of the above assumptions 
+3. Summarize your results in a tabular format 
+4. Compare and contrast the above results 
+
+
+```{r}
+# Loading the required libraries
+library(Benchmarking)
+library(knitr)
+```
+
+
+
+```{r}
+dmu_data <- data.frame(
+  DMU = c("Facility 1", "Facility 2", "Facility 3", "Facility 4", "Facility 5", "Facility 6"),
+  "Staff Hours per Day" = c(150, 400, 320, 520, 350, 320),
+  "Supplies per Day (in thousands)" = c(0.2, 0.7, 1.2, 2.0, 1.2, 0.7),
+  "Reimbursed Patient-Days" = c(14000, 14000, 42000, 28000, 19000, 14000),
+  "Privately Paid Patient-Days" = c(3500, 21000, 10500, 42000, 25000, 15000)
+)
+```
+
+
+
+
+```{r}
+# Displaying the table of inputs and outputs
+kable(dmu_data, caption = "Table 1: Input and Output Data for Each Facility")
+```
+
+
+
+```{r}
+##Input data
+inputs <- matrix(as.numeric(c(150, 400, 320, 520, 350, 320, 0.2, 0.7, 1.2, 2.0, 1.2, 0.7)), ncol=2, byrow=FALSE)
+outputs <- matrix(as.numeric(c(14000, 14000, 42000, 28000, 19000, 14000, 3500, 21000, 10500, 42000, 25000, 15000)), ncol=2, byrow=FALSE)
+```
+
+
+```{r}
+# Naming the DMUs (Decision Making Units)
+dmu_names <- c("Facility 1", "Facility 2", "Facility 3", "Facility 4", "Facility 5", "Facility 6")
+```
+
+
+```{r}
+# DEA analysis under CRS (Constant Returns to Scale)
+dea_crs <- dea(X = inputs, Y = outputs, RTS = "crs", ORIENTATION = "out")
+peers_crs <- peers(dea_crs)
+lambdas_crs <- dea_crs$lambda
+```
+
+
+
+```{r}
+# DEA analysis under VRS (Variable Returns to Scale)
+dea_vrs <- dea(X = inputs, Y = outputs, RTS = "vrs", ORIENTATION = "out")
+peers_vrs <- peers(dea_vrs)
+lambdas_vrs <- dea_vrs$lambda
+```
+
+
+
+```{r}
+# DEA analysis under IRS (Increasing Returns to Scale)
+dea_irs <- dea(X = inputs, Y = outputs, RTS = "irs", ORIENTATION = "out")
+peers_irs <- peers(dea_irs)
+lambdas_irs <- dea_irs$lambda
+```
+
+
+```{r}
+# DEA analysis under DRS (Decreasing Returns to Scale)
+dea_drs <- dea(X = inputs, Y = outputs, RTS = "drs", ORIENTATION = "out")
+peers_drs <- peers(dea_drs)
+lambdas_drs <- dea_drs$lambda
+```
+
+
+
+```{r}
+# DEA analysis under FDH (Free Disposal Hull)
+dea_fdh <- dea(X = inputs, Y = outputs, RTS = "fdh", ORIENTATION = "out")
+peers_fdh <- peers(dea_fdh)
+lambdas_fdh <- dea_fdh$lambda
+```
+
+
+
+```{r}
+# DEA analysis under FRH (Free Replication Hull)
+dea_frh <- dea(X = inputs, Y = outputs, RTS = "fdh", ORIENTATION = "out")
+# Extracting peers and lambdas for FRH
+peers_frh <- peers(dea_frh)
+lambdas_frh <- dea_frh$lambda
+```
+
+
+```{r}
+# Generating the Peers and Lambdas table
+generate_peers_lambdas_table <- function(peers, lambdas, model_name) {
+  data <- data.frame(
+    DMU = dmu_names,
+    Peers = apply(peers, 1, function(x) paste(na.omit(x), collapse = ", ")),
+    Lambdas = apply(lambdas, 1, function(x) paste(round(x, 3), collapse = ", "))
+  )
+  kable(data, caption = paste("Table: Peers and Lambdas for", model_name, "Model"))
+}
+```
+
+
+
+```{r}
+# Displaying tables for each model
+generate_peers_lambdas_table(peers_crs, lambdas_crs, "CRS")
+generate_peers_lambdas_table(peers_vrs, lambdas_vrs, "VRS")
+generate_peers_lambdas_table(peers_irs, lambdas_irs, "IRS")
+generate_peers_lambdas_table(peers_drs, lambdas_drs, "DRS")
+generate_peers_lambdas_table(peers_fdh, lambdas_fdh, "FDH")
+generate_peers_lambdas_table(peers_frh, lambdas_frh, "FRH")
+```
+
+
+
+## Efficiency Summary Table
+
+```{r}
+# Extracting efficiency scores from each DEA model
+efficiency_summary <- data.frame(
+  DMU = dmu_names,
+  CRS = dea_crs$eff,  # Extracting efficiency from the CRS model
+  VRS = dea_vrs$eff,  # Extracting efficiency from the VRS model
+  IRS = dea_irs$eff,  # Extracting efficiency from the IRS model
+  DRS = dea_drs$eff,  # Extracting efficiency from the DRS model
+  FRH = dea_frh$eff,  # Extracting efficiency from the FRH model
+  FDH = dea_fdh$eff   # Extracting efficiency from the FDH model
+)
+
+```
+
+
+```{r}
+
+# Displaying the efficiency summary table
+kable(efficiency_summary, caption = "Table: Efficiency Scores for Each Model")
+
+```
+
+
+
+```{r}
+# Loading the ggplot2 package
+library(ggplot2)
+
+# Reshape the efficiency data for plotting
+efficiency_long <- reshape2::melt(efficiency_summary, id.vars = "DMU", 
+                                  variable.name = "Model", value.name = "Efficiency")
+
+```
+
+
+
+```{r}
+# Ploting efficiency scores for all models
+ggplot(efficiency_long, aes(x = DMU, y = Efficiency, fill = Model)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7) +
+  labs(title = "Efficiency Scores for All DEA Models", x = "Facility", y = "Efficiency Score") +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  scale_fill_brewer(palette = "Set2")
+```
+
+
+
+##Summary of DEA Analysis for Hope Valley Health Care Association
+
+
+This analysis evaluated the operational efficiency of six nursing homes owned by the Hope Valley Health Care Association using Data Envelopment Analysis (DEA). Two inputs (staffing hours per day and supply costs) and two outputs (reimbursed and privately paid patient-days) were used in the evaluation under several DEA model assumptions which are CRS, VRS, IRS, DRS, FDH, and FRH.
+
+#DEA Model Assumptions:
+
+#CRS (Constant Returns to Scale):
+
+This model Assumes that outputs change proportionally with inputs. Facilities 1 to 4 were found efficient, while Facilities 5 and 6 showed inefficiency due to scale issues.
+
+#VRS (Variable Returns to Scale):
+
+This model is more flexible, allowing for variable returns. Most facilities except Facility 6 were found efficient, indicating that their inefficiencies were primarily due to scale inefficiency rather than operational inefficiency.
+
+#IRS (Increasing Returns to Scale) & DRS (Decreasing Returns to Scale): 
+
+These models assess whether facilities would benefit from scaling up or down operations. Facilities 1 to 5 were efficient under both models, while Facility 6 remained inefficient, indicating potential issues regardless of scaling adjustments.
+
+#FDH (Free Disposal Hull) & FRH (Free Replication Hull):
+
+These models provided more lenient efficiency assessments, classifying all facilities as efficient due to the less restrictive assumptions of convexity.
+Peers and Lambdas:
+
+For each model, the peer facilities (efficient comparators) and their respective lambdas (weights) were identified. Peers help explain how inefficient facilities could improve their operations by comparing them to efficient benchmarks.
+Efficiency Scores:
+
+Efficiency scores for each facility across all models were summarized in a table. Facilities 1 to 4 generally exhibited high efficiency, while Facility 6 consistently showed lower performance, requiring operational improvements.
+Comparison and Insights:
+
+The analysis revealed that Facility 6 is the least efficient across most models, suggesting a need for both scale and operational improvements. Facility 5, while inefficient under CRS, became fully efficient under VRS and IRS, indicating that its inefficiency is due to inappropriate scaling rather than poor operations.
+
+#Conclusion:
+
+In summary, the DEA models provided insights into the efficiency and operational performance of the nursing homes. By comparing different DEA assumptions, we identified facilities with potential for operational improvements and scale adjustments. This analysis highlights the importance of choosing the right DEA model to capture inefficiencies accurately.
+
+
+
