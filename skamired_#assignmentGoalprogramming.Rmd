@@ -1,0 +1,116 @@
+---
+title: "QMM-GoalProgramming"
+author: "Sandhya"
+date: "2024-11-02"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Problem statemenmt
+
+The Research and Development Division of the Emax Corporation has developed three new products. A decision now needs to be made on which mix of these products should be produced. Management wants primary consideration given to three factors: total profit, stability in the workforce, and achieving an increase in the company’s earnings next year from the $75 million achieved this year. In particular, using the units given in the following table, they want to 
+
+Maximize Z = P - 6C - 3D, 
+
+where  
+P = total (discounted) profit over the life of the new products, 
+C = change (in either direction) in the current level of employment, 
+D = decrease (if any) in next year’s earnings from the current year’s level. 
+
+The amount of any increase in earnings does not enter into Z, because management is concerned primarily with just achieving some increase to keep the stockholders happy. (It has mixed feelings about a large increase that then would be difficult to surpass in subsequent years.) 
+
+
+# Analysis of Emax Corporation's Production Plan
+
+
+*Problem Overview:*
+
+The Research and Development Division of Emax Corporation developed three products and needed to determine the optimal production mix. The primary factors for decision-making were:
+
+* Profit maximization
+
+* Workforce stability
+
+* Maintaining or increasing earnings compared to last year ($75 million)
+
+The objective function to be maximized was:
+
+where:
+
+ * = Total profit over the life of the products
+
+ * = Change in employment level
+
+ * = Decrease in earnings for the next year
+ 
+
+*Key Results*
+
+
+1. Optimal Production Plan:
+
+Produce 0 units of Product 1 and Product 2.
+
+Produce 15 units of Product 3.
+
+This plan maximizes profit while adhering to the constraints on employment levels and earnings.
+
+2. Employment and Earnings Impact:
+
+The employment level exceeded the target by 25 employees, ensuring stability and meeting workforce goals.
+
+There was no deviation in earnings, maintaining a steady comparison to last year’s $75 million, thus satisfying the earnings constraint.
+
+3. Profit Maximization:
+
+The maximum achievable profit under these constraints is $225 million
+
+
+# Load necessary packages
+```{r}
+library(lpSolve)
+library(lpSolveAPI)
+```
+
+# Setting Up the problem matrix
+```{r}
+sandy <- matrix(c("Total Profit", "Employment Level", "Earnings Next Year",
+                       20,6,8,
+                       15,4,7,
+                       25,5,5,
+                       "Maximize","=50",">=75",
+                       "Millions of Dollars", "Hundreds of Employees", "Millions of Dollars"), ncol=6, byrow = F)
+colnames(sandy) <- c("Factor","Product 1", "Product 2", "Product 3", "Goal", "Units")
+as.table(sandy)
+```
+# Created an LP file with the following objective function and contraints
+
+Objective function max: 20x1 + 15x2 + 25x3 - 6y1M - 6y1P - 3y2M;
+
+Constraints 
+6x1 + 4x2 + 5x3 + y1M - y1P = 50; 
+8x1 + 7x2 + 5x3 + y2M - y2P = 75;
+
+# Reading the Linear Program
+```{r}
+E <- read.lp("sandhya.lp")
+```
+
+# Solving the Linear Program
+```{r}
+solve(E)
+```
+# Extracting Results
+```{r}
+get.objective(E)
+get.variables(E)
+```
+
+# Conclusion
+Based on the findings of linear programming, Emax Corporation's production strategy suggests concentrating only on Product 3 in order to reach employment and profits targets and make the maximum profit of $225 million. This well-rounded strategy supports both workforce sustainability and financial stability, which is in line with management's goals.
