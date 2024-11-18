@@ -1,0 +1,189 @@
+---
+title: "QMM INTEGER PROGRAMMING MODULE-11"
+author: "Sandhya kamireddy"
+date: "2024-11-16"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Formulate the problem
+
+
+Let us assume that, x1, x2, x3, x4, x5,x6,x7 are working in the 1, 2,3,4,5,6,7 shifts respectively. 
+
+## Objective Function:
+
+    MINZ = 775x1 + 800x2 + 800x3 + 800x4 + 800x5 + 775x6 + 750x7
+
+
+## Constraints:
+
+
+ x2 + x3 + x4 + x5 + x6 >= 18 (Sunday)
+ 
+ x3 + x4 + x5 + x6 + x7 >= 27 (Monday)
+ 
+ x1 + x4 + x5 + x6 + x7 >= 22 (Tuesday)
+ 
+ x1 + x2 + x5 + x6 + x7 >= 26 (Wednesday)
+ 
+ x1 + x2 + x3 + x6 + x7 >= 25 (Thursday)
+ 
+ x1 + x2 + x3 + x4 + x7 >= 21 (Friday)
+ 
+ x1 + x2 + x3 + x4 + x5 >= 19 (Saturday)
+ 
+ and x1,x2,x3,x4,x5,x6,x7 >= 0
+
+#  2. Solving problem in R Markdown:
+
+```{r}
+# Loading the required libraries
+library(lpSolveAPI)
+```
+
+
+```{r}
+# Creating a workers table dataframe
+
+  days_workers <- matrix(c(
+  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+  18, 27, 22, 26, 25, 21, 19
+), ncol = 2, byrow = FALSE)
+
+colnames(days_workers) <- c("days.of.the.week", "workers.required")
+as.table(days_workers)
+```
+
+##  Defining the LP model
+```{R}
+# Creating LP model with 7 decision variables
+lprec1 <- make.lp(0, 7)
+```
+
+##  Seting the objective function (minimizing costs for each shift)
+```{R}
+#  cost per worker
+set.objfn(lprec1, c(775, 800, 800, 800, 800, 775, 750))
+```
+
+```{r}
+# Setting decision variables as integers
+set.type(lprec1, 1:7, "integer")
+```
+
+
+```{r}
+# Adding constraints (worker availability for each day)
+add.constraint(lprec1, c(0, 1, 1, 1, 1, 1, 0), ">=", 18) # Sunday
+add.constraint(lprec1, c(0, 0, 1, 1, 1, 1, 1), ">=", 27) # Monday
+add.constraint(lprec1, c(1, 0, 0, 1, 1, 1, 1), ">=", 22) # Tuesday
+add.constraint(lprec1, c(1, 1, 0, 0, 1, 1, 1), ">=", 26) # Wednesday
+add.constraint(lprec1, c(1, 1, 1, 0, 0, 1, 1), ">=", 25) # Thursday
+add.constraint(lprec1, c(1, 1, 1, 1, 0, 0, 1), ">=", 21) # Friday
+add.constraint(lprec1, c(1, 1, 1, 1, 1, 0, 0), ">=", 19) # Saturday
+```
+
+
+```{r}
+# Solving the model
+solve(lprec1)
+```
+# 3. Find the total cost and the number of workers available each day.
+
+```{r}
+# Retrieve and display results
+# Minimized total wage cost
+total_cost <- get.objective(lprec1)
+total_cost
+```
+
+```{r}
+# Number of workers assigned to each shift
+workers_per_shift <- get.variables(lprec1)
+workers_per_shift
+```
+
+```{r}
+# Workers available each day (from constraints)
+workers_per_day <- get.constraints(lprec1)
+workers_per_day
+```
+
+```{r}
+# Printing results
+cat("Total Wage Cost: ", total_cost, "\n")
+cat("Workers Assigned to Each Shift: ", workers_per_shift, "\n")
+cat("Workers Available Each Day: ", workers_per_day, "\n")
+```
+
+```{r}
+# Verifying availability for each day
+cat("Sunday: ", sum(get.variables(lprec1)[c(2, 3, 4, 5, 6)]), "\n")
+```
+
+```{r}
+cat("Monday: ", sum(get.variables(lprec1)[c(3, 4, 5, 6, 7)]), "\n")
+```
+
+```{r}
+cat("Tuesday: ", sum(get.variables(lprec1)[c(1, 4, 5, 6, 7)]), "\n")
+```
+
+```{r}
+cat("Wednesday: ", sum(get.variables(lprec1)[c(1, 2, 5, 6, 7)]), "\n")
+```
+
+```{r}
+cat("Thursday: ", sum(get.variables(lprec1)[c(1, 2, 3, 6, 7)]), "\n")
+```
+
+```{r}
+cat("Friday: ", sum(get.variables(lprec1)[c(1, 2, 3, 4, 7)]), "\n")
+```
+
+```{r}
+cat("Saturday: ", sum(get.variables(lprec1)[c(1, 2, 3, 4, 5)]), "\n")
+```
+
+# CONCLUSION
+
+The Integer Programming model was effectively constructed and solved to minimize the total wage costs while ensuring that the required number of workers was available for each day of the week. This approach provided an optimized solution that satisfied all constraints and met the objectives of the problem.
+
+## Summary of Results:
+
+  Total Wage Cost - $25,675
+  
+ 
+## NO.of Workers Assigned to Each Shift:
+  
+   Shift 1: 2  workers  
+   Shift 2: 4  workers  
+   Shift 3: 5  workers  
+   Shift 4: 0  workers  
+   Shift 5: 8  workers  
+   Shift 6: 1  workers 
+   Shift 7: 13 workers 
+   
+   
+## Daily Workers Availability:
+
+ Sunday    : 18 workers (minimum workers required: 18)
+ Monday    : 27 workers (minimum workers required: 27)
+ Tuesday   : 24 workers (minimum workers required: 22)
+ Wednesday : 28 workers (minimum workers required: 26)
+ Thursday  : 25 workers (minimum workers required: 25)
+ Friday    : 24 workers (minimum workers required: 21)
+ Saturday  : 19 workers (minimum workers required: 19)
+ 
+ 
+
+This solution guarantees that all daily staffing needs were not only met but exceeded where necessary, while keeping the overall cost as low as possible. By efficiently assigning workers to different shifts, the model successfully balanced the need for adequate staffing with the goal of minimizing expenses.
+
+
+
