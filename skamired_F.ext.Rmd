@@ -1,0 +1,294 @@
+---
+title: "QMM_FINAL"
+author: "Hitaishi Bairapureddy, Sandhya Kamireddy, Neetu Murthy"
+date: "2024-12-06"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Summary of Analysis:
+
+We tackled this problem by:
+
++ Identifying and justifying key factors—teamwork, GPA, and role distribution—essential for group success.
+  Creating a realistic, diverse dataset to represent student capabilities.
+  
++ Formulating a mathematical model to maximize group success while ensuring balanced and fair group assignments.
+  The solution optimally forms groups with a well-rounded mix of skills, maximizing their collective      potential for success.
+
+
+
+```{r}
+# Load required libraries
+library(lpSolve)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+### Questions:
+
+ + What are your decision variables?
+ 
+ +  What is your objective function?
+ 
+ + What are your constraints?
+
+### Objective Function and Decision Variables
+
+The goal of the optimization problem is to maximize the total success score across all groups. The objective function can be expressed mathematically as:
+
+\[
+\text{Maximize } Z = \sum_{i=1}^{n} \sum_{j=1}^{m} S_i \cdot x_{ij}
+\]
+
+Where:
+- \( Z \): Total success score of all groups (objective to maximize).
+
+- \( n \): Total number of students.
+
+- \( m \): Total number of groups.
+
+- \( S_i \): Success score of student \( i \), calculated using the weighted sum of GPA, Teamwork, and Role Distribution.
+
+- \( x_{ij} \): Binary decision variable, where:
+  \[
+  x_{ij} =
+  \begin{cases} 
+  1 & \text{if student } i \text{ is assigned to group } j, \\
+  0 & \text{otherwise}.
+  \end{cases}
+  \]
+
+### Constraints
+
+1. *Each student must belong to exactly one group:*
+
+\[
+\sum_{j=1}^{m} x_{ij} = 1 \quad \forall i \in \{1, 2, \dots, n\}
+\]
+
+This ensures that every student is assigned to exactly one group.
+
+2. *Each group must have exactly 3 students:*
+
+\[
+\sum_{i=1}^{n} x_{ij} = 3 \quad \forall j \in \{1, 2, \dots, m\}
+\]
+
+This ensures that each group is balanced with exactly 3 members.
+
+These formulations define the optimization problem mathematically, ensuring that the groups are formed to maximize the overall success score while adhering to the constraints
+
+
+```{r}
+# Step 1: Generate random data for the factors
+set.seed(123) # For reproducibility
+num_students <- 12
+num_groups <- 4
+```
+
+
+
+#### What factors affect the success of groups? Define three factors, e.g., GPA, gender, etc.,that you feel affect the contributions that students make towards project success.
+
+#### How will you collect data for these factors? For this assignment, randomly generate sensible data for each of the above three defined factors.
+
+```{r}
+gpa <- runif(num_students, 2.0, 4.0) # GPA between 2.0 and 4.0
+teamwork <- runif(num_students, 1, 10) # Teamwork score between 1 and 10
+role <- runif(num_students, 1, 10) # Role Distribution score between 1 and 10
+```
+
+
+
+#### How do the above factors combine to define success? For example, is a person with high GPA the same as one with a more relevant background? Decide on how each of the factors contribute toward your definition of success
+```{r}
+groups_data <- data.frame(Student = 1:num_students, GPA = gpa, Teamwork = teamwork, RoleDistribution = role)
+print(groups_data)
+
+# Step 2: Define the weights for the success score
+weightage <- c(0.5, 0.3, 0.2) # Weight for GPA, Teamwork, Role Distribution respectively
+```
+
+The success of the groups depends on three factors:
+
+Teamwork (40%): Indicates the ability of a student to collaborate effectively, now given the highest weight as teamwork is crucial for project outcomes.
+GPA (30%): Reflects the student’s academic performance, scaled to a range of 0–50 to provide granularity.
+Role Distribution (20%): Represents the student’s ability to take on and manage specific responsibilities within the group.
+These factors were chosen to balance interpersonal skills, academic strength, and role management to maximize project success.
+
+
+
+```{r}
+# Step 3: Calculate the "performance index" matrix for groups
+performance_index <- as.vector(groups_data$GPA * weightage[1] + 
+                            groups_data$Teamwork * weightage[2] + 
+                            groups_data$RoleDistribution * weightage[3])
+```
+
+
+```{r}
+# Step 4: Formulate the optimization problem
+# Decision variables: 1 if student i is in group j, 0 otherwise
+decision_matrix <- matrix(0, nrow = num_students, ncol = num_students * num_groups)
+
+for (i in 1:num_students) {
+  for (j in 1:num_groups) {
+    decision_matrix[i, (j - 1) * num_students + i] <- 1
+  }
+}
+```
+
+```{r}
+# Constraint 1: Each student should belong to exactly one group
+student_constraints <- decision_matrix
+student_constraints_rhs <- rep(1, num_students)
+
+# Constraint 2: Each group should have exactly 3 students
+group_constraints <- matrix(0, nrow = num_groups, ncol = ncol(decision_matrix))
+
+for (j in 1:num_groups) {
+  for (i in 1:num_students) {
+    group_constraints[j, (j - 1) * num_students + i] <- 1
+  }
+}
+group_constraints_rhs <- rep(3, num_groups)
+```
+
+
+```{r}
+constraint_matrix <- rbind(student_constraints, group_constraints)
+constraint_rhs <- c(student_constraints_rhs, group_constraints_rhs)
+constraint_dir <- c(rep("=", num_students), rep("=", num_groups))
+```
+
+```{r}
+# Objective function: Maximize the success score
+objective_fn <- rep(performance_index, num_groups)
+
+# Solve the model using lpSolve
+solution <- lp("max", objective_fn, constraint_matrix, constraint_dir, constraint_rhs)
+```
+
+
+```{r}
+# Extract results
+decision_vars <- matrix(solution$solution, nrow = num_students, byrow = FALSE)
+rownames(decision_vars) <- paste("Student", 1:num_students)
+colnames(decision_vars) <- paste("Group", 1:num_groups)
+
+# Print the results
+cat("Objective function value (maximized performance Index):", solution$objval, "\n")
+print("Optimal group assignments (decision variables):")
+print(decision_vars)
+```
+
+```{r}
+# Step 5: Generate insights
+# Aggregate students into groups
+groups <- apply(decision_vars, 1, which.max)
+groups_data$Group <- groups
+group_assignments <- split(groups_data, groups)
+print("Group Assignments:")
+print(group_assignments)
+```
+
+```{r}
+# Visualizing the results
+# Plot 1: Bar plot of success scores for students
+groups_data$SuccessScore <- performance_index
+ggplot(groups_data, aes(x = factor(Student), y = SuccessScore)) +
+  geom_bar(stat = "identity", fill = "purple") +
+  labs(title = "Performance Index of Students", x = "Student", y = "Success Score") +
+  theme_minimal()
+
+```
+
+The graph shows variability in student performance, with Student 8 achieving the highest success score and Student 6 the lowest. Most students score between 4 and 6, indicating a moderate level of success. The data highlights both top performers and areas where improvement is needed.
+
+
+```{r}
+# Plot 2: Group-wise average GPA, Teamwork, and Role Distribution
+group_means <- groups_data %>%
+  group_by(Group) %>%
+  summarise(Average_GPA = mean(GPA), 
+            Average_Teamwork = mean(Teamwork), 
+            Average_RoleDistribution = mean(RoleDistribution)) %>%
+  pivot_longer(cols = c(Average_GPA, Average_Teamwork, Average_RoleDistribution), 
+               names_to = "Attribute", 
+               values_to = "Average")
+
+ggplot(group_means, aes(x = factor(Group), y = Average, fill = Attribute)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = "Average Metrics by Group", x = "Group", y = "Average Value") +
+  theme_minimal()
+
+```
+
+The bar graph illustrates the average values of GPA, Role Distribution, and Teamwork across four groups. Group 1 stands out with the highest teamwork scores, indicating strong collaboration within the group. Role Distribution is consistently higher than GPA in all groups, reflecting a better balance in task allocation compared to academic performance. Group 3 and Group 4 show relatively lower averages in teamwork, with Group 4 displaying the most balanced but overall lower scores across all metrics. GPA remains the lowest metric in all groups, suggesting it is the area with the most room for improvement. Overall, Group 1 demonstrates the strongest performance, particularly in teamwork and role distribution.
+
+```{r}
+# Plot 3: Scatter plot showing student distribution across groups
+ggplot(groups_data, aes(x = factor(Group), y = SuccessScore, color = factor(Group))) +
+  geom_point(size = 3) +
+  labs(title = "Student Distribution Across Groups", x = "Group", y = "Success Score") +
+  theme_minimal()
+```
+
+The scatter plot shows the distribution of students' success scores across four groups, highlighting notable performance differences. Group 1 stands out with the highest scores, as all students score above 6, indicating strong performance. Groups 2 and 3 have similar distributions, with most scores clustered around 5, reflecting moderate success levels. In contrast, Group 4 exhibits the lowest performance, with success scores ranging between 3 and 4. Overall, the plot reveals a clear hierarchy in group performance, with Group 1 leading and Group 4 lagging significantly behind.
+
+
+
+
+```{r}
+library(ggplot2)
+library(GGally)
+
+# Histogram for GPA
+ggplot(groups_data, aes(x = GPA)) +
+  geom_histogram(binwidth = 0.2, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of GPA", x = "GPA", y = "Count") +
+  theme_minimal()
+
+# Histogram for Teamwork
+ggplot(groups_data, aes(x = Teamwork)) +
+  geom_histogram(binwidth = 1, fill = "lightgreen", color = "black") +
+  labs(title = "Distribution of Teamwork Scores", x = "Teamwork", y = "Count") +
+  theme_minimal()
+
+# Histogram for Role Distribution
+ggplot(groups_data, aes(x = RoleDistribution)) +
+  geom_histogram(binwidth = 1, fill = "pink", color = "black") +
+  labs(title = "Distribution of Role Distribution Scores", x = "Role Distribution", y = "Count") +
+  theme_minimal()
+
+ggpairs(groups_data[, c("GPA", "Teamwork", "RoleDistribution")],
+      main = "Pairwise Scatterplots of Factors",
+      pch = 21, bg = "skyblue")
+```
+
+The scatterplot matrix reveals a moderate positive correlation between GPA and Teamwork (Corr: 0.366, 0.344). However, there is no significant correlation between Role Distribution and either GPA or Teamwork (Corr: -0.000). The distribution of all three variables appears right-skewed based on the density plots.
+
+
+
+### Conclusion
+
+The optimization of group assignments demonstrates a deliberate approach to balancing teamwork, academic performance, and role distribution, yielding an objective function value of 56.42911. The analysis underscores the pivotal role of teamwork (40% weight), supported by GPA (30%) and role distribution (20%), in maximizing group success. Group 1 emerged as the strongest performer, excelling in teamwork and role distribution, while Group 4 faced challenges, achieving the lowest scores across all metrics.
+
+Insights from visual analyses reveal significant variability in student performance and group dynamics. The scatter plot and bar graph emphasize that Group 1's cohesive teamwork significantly boosts success, whereas Groups 3 and 4 show the need for strategic interventions to enhance collaboration and task allocation. Notably, GPA consistently lags across all groups, highlighting it as an area requiring focus for academic improvement.
+
+The scatterplot matrix further validates a moderate correlation between GPA and teamwork, indicating that collaboration can potentially drive academic outcomes. However, the lack of correlation between role distribution and other factors suggests that role management, though critical, does not inherently align with academic or teamwork metrics.
+
+### Recommendations
+Enhance Teamwork Across Groups: Strategies to foster collaboration, particularly in Groups 3 and 4, could elevate overall performance.
+Address Academic Gaps: Focused academic interventions and support programs are needed to raise GPA levels across all groups.
+Tailored Role Distribution: Exploring more targeted role assignments may enhance group efficiency, particularly for underperforming teams.
+This study offers a comprehensive framework for optimizing group performance, providing actionable insights to improve both individual and collective outcomes.
+
